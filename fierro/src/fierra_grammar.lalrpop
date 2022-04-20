@@ -1,0 +1,70 @@
+use std::str::FromStr;
+use crate::ast::{Expression, Operand};
+
+grammar;
+
+pub Block: Box<Expression> = {
+    <b:Block> ";" <c:Condition> => Box::new(Expression::BinaryOperation(b, Operand::Block, c)),
+    Condition
+}
+
+pub Condition: Box<Expression> = {
+    "if" <e:Condition> "then" <n:Condition> => Box::new(Expression::BinaryOperation(e, Operand::IfCondition, n)),
+    "print" <t:Condition> => Box::new(Expression::UnaryOperation(t, Operand::PrintCondition)),
+    "get" <v:ID> => Box::new(Expression::GetVariable(v)),
+    "new" <n:ID> <v:Condition> => Box::new(Expression::InsertVariable(n, v)),
+
+    "while" <n:Condition> "do" <c:Condition> => Box::new(Expression::BinaryOperation(n, Operand::WhileCondition, c)),
+    "for" <a:Condition> "," <b:Condition> "," <c:Condition> "do" <d:Condition> => Box::new(Expression::For(a, b, c, d)),
+
+    "in" => Box::new(Expression::In),
+
+    Equal,
+    "{" <Block> "}"
+}
+
+pub Equal: Box<Expression> = {
+    Equal Eq Expr => Box::new(Expression::BinaryOperation(<>)),
+    Expr
+}
+
+pub Eq: Operand = {
+    "=" => Operand::Equal,
+    ">" => Operand::Bigger,
+    "<" => Operand::Lower
+}
+
+pub Expr: Box<Expression> = {
+    Expr Op Factor => Box::new(Expression::BinaryOperation(<>)),
+    Factor
+}
+
+
+pub Factor: Box<Expression> = {
+    Factor Fac Term => Box::new(Expression::BinaryOperation(<>)),
+    Term
+}
+
+pub Term: Box<Expression> = {
+    Num,
+    "[" <Condition> "]",
+    "(" <Expr> ")"
+}
+
+pub Op: Operand = {
+    "+" => Operand::Plus,
+    "-" => Operand::Minus
+}
+
+pub Fac: Operand = {
+    "*" => Operand::Mul,
+    "/" => Operand::Div
+}
+
+pub ID: String = {
+    r"[a-z]+" => String::from(<>)
+}
+
+pub Num: Box<Expression> = {
+    r"[0-9]+" => Box::new(Expression::Number(i32::from_str(<>).unwrap()))
+}
